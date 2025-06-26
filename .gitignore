@@ -34,3 +34,7 @@ build/
 
 ### SSMS ###
 .vs/
+
+### Properties ###
+application-dev.properties
+application-prod.properties

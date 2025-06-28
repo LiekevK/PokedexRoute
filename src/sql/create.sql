@@ -1,11 +1,21 @@
+USE master
+GO
+
+DROP DATABASE IF EXISTS PokedexRoute
+GO
+
 CREATE DATABASE PokedexRoute
 GO
 
 USE PokedexRoute
 GO
 
+DROP TABLE IF EXISTS Pokedex
+GO
+
 CREATE TABLE Pokedex
 (
-	dexNumber INT NOT NULL PRIMARY KEY, 
-	[status] BIT NOT NULL
+    dexNumber INT NOT NULL PRIMARY KEY,
+    [status] BIT NOT NULL DEFAULT 0
 )
+GO

@@ -1,29 +1,27 @@
 package liekevk.pokedexroute.Application;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import liekevk.pokedexroute.Datasource.IPokedexInitializerDAO;
-import liekevk.pokedexroute.Datasource.PokeAPIClient;
-import liekevk.pokedexroute.Datasource.exception.PokeAPIClientException;
 import liekevk.pokedexroute.Object.Pokemon;
 import liekevk.pokedexroute.Object.Route;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+import skaro.pokeapi.client.PokeApiClient;
+import skaro.pokeapi.resource.location.Location;
+import skaro.pokeapi.resource.locationarea.LocationArea;
+import skaro.pokeapi.resource.pokedex.Pokedex;
+import skaro.pokeapi.resource.pokemonspecies.PokemonSpecies;
+import skaro.pokeapi.resource.region.Region;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import static liekevk.pokedexroute.Datasource.PokeAPIClient.Routes;
-
 @Service
-public class PokedexInitializer implements IPokedexInitializer{
-
+public class PokedexInitializer implements IPokedexInitializer {
     private IPokedexInitializerDAO pokedexInitializerDAO;
-    private PokeAPIClient pokeAPIClient;
+    private PokeApiClient pokeAPIClient;
     private PokemonInitializer pokemonInitializer;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     public void setPokedexInitializerDAO(IPokedexInitializerDAO pokedexInitializerDAO) {
@@ -31,7 +29,7 @@ public class PokedexInitializer implements IPokedexInitializer{
     }
 
     @Autowired
-    public void setPokeAPIClient(PokeAPIClient pokeAPIClient) {
+    public void setPokeAPIClient(PokeApiClient pokeAPIClient) {
         this.pokeAPIClient = pokeAPIClient;
     }
 
@@ -41,112 +39,67 @@ public class PokedexInitializer implements IPokedexInitializer{
     }
 
     @Override
-    public List<Pokemon> receiveAllPokemon(int generation) throws JsonProcessingException, PokeAPIClientException {
-        List<Pokemon> pokemon = pokedexInitializerDAO.initializePokedex(generation);
-        for (Pokemon p : pokemon) {
-            pokemonInitializer.setNameAndSprite(p);
-        }
-
-        return pokemon;
-    }
-
-    public void fillDatabaseWithPokemon(int generation) throws JsonProcessingException {
-        String json = requestDex(generation);
-        JsonNode jsonNode = objectMapper.readTree(json);
-
-        ArrayList<Pokemon> pokedex = new ArrayList<>();
-
-        for (JsonNode node : jsonNode.get("pokemon_entries")) {
-            int dexNumber = node.get("entry_number").asInt();
-            pokedex.add(new Pokemon(requestNationalNumber(json, dexNumber), generation, dexNumber));
-        }
-
-        pokedexInitializerDAO.addPokemonToPokedex(pokedex);
-    }
-
-    private int requestNationalNumber(String json, int dexNumber) throws JsonProcessingException {
-        try {
-            JsonNode jsonNode = objectMapper.readTree(json);
-            String newJson = null;
-
-            for (JsonNode node : jsonNode.get("pokemon_entries")) {
-                if (node.get("entry_number").asInt() == dexNumber) {
-                    newJson = pokeAPIClient.get(Routes.pokemonSpecies(node.get("pokemon_species").get("name").asText()));
-                }
-            }
-            if (newJson != null && !newJson.isEmpty() ) {
-                JsonNode jsonNode2 = objectMapper.readTree(newJson);
-                return jsonNode2.get("id").asInt();
-            }
-        } catch (PokeAPIClientException e) {
-            e.printStackTrace();
-        }
-        return -1;
-    }
-
-
-    private String requestDex(int generation) {
-        try {
-            return pokeAPIClient.get(Routes.pokedex(generation));
-        } catch (PokeAPIClientException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    public ArrayList<String> receiveListOfRoutes(int generation) throws JsonProcessingException, PokeAPIClientException {
-        List<Route> routes = requestAllRoutes(generation);
-        ArrayList<String> routeNames = new ArrayList<>();
-        for (Route route : routes) {
-            routeNames.add(route.getName());
-        }
-        return routeNames;
-    }
-
-    private List<Route> requestAllRoutes(int generation) throws JsonProcessingException, PokeAPIClientException {
-        String json = requestDex(generation);
-        JsonNode dex = objectMapper.readTree(json);
-        List<Route> routes = new ArrayList<>();
-
-        JsonNode region = objectMapper.readTree(pokeAPIClient.get(dex.get("region").get("url").asText()));
-
-        List<JsonNode> areas = region.get("locations").valueStream()
-                .map((location) -> {
-                    try {
-                        return objectMapper.readTree(pokeAPIClient.get(location.get("url").asText()));
-                    } catch (PokeAPIClientException | JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .flatMap((location) -> location.get("areas").valueStream())
-                .toList();
-
-        for (JsonNode area : areas) {
-            ArrayList<Pokemon> pokemons = new ArrayList<>();
-            for (JsonNode pokemon : area.get("pokemon_encounters")) {
-                String name = area.get("pokemon_encounters").get("pokemon").get("name").asText();
-                Pokemon pokemon1 = pokedexInitializerDAO.getPokemonOnName(generation, name);
-                pokemonInitializer.setNameAndSprite(pokemon1);
-                pokemons.add(pokemon1);
-            }
-
-
-            Route route = new Route(area.get("location").get("name").asText(), new ArrayList<>());
-            routes.add(route);
-        }
-        System.out.println(routes);
-        return routes;
+    public Flux<Pokemon> receiveAllPokemon(int generation) {
+        return Mono.fromCallable(() -> pokedexInitializerDAO.initializePokedex(generation))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMapMany(Flux::fromIterable)
+                .flatMap(pokemon -> pokemonInitializer.setNameAndSprite(pokemon));
     }
 
     @Override
-    public List<Pokemon> receiveRoutePokemon(String routeName, int generation) throws JsonProcessingException, PokeAPIClientException {
-        List<Pokemon> pokemon = new ArrayList<>();
-        List<Route> routes = requestAllRoutes(generation);
-        for (Route route : routes) {
-            if (route.getName().equals(routeName)) {
-                pokemon = route.getPokemons();
-            }
-        }
-        return pokemon;
+    public Mono<Void> fillDatabaseWithPokemon(int generation) {
+        return requestDex(generation)
+                .flatMapIterable(Pokedex::getPokemonEntries)
+                .flatMap(entry -> {
+                    int dexNumber = entry.getEntryNumber();
+                    return pokeAPIClient.followResource(entry::getPokemonSpecies, PokemonSpecies.class)
+                            .map(PokemonSpecies::getId)
+                            .map(nationalNumber -> new Pokemon(nationalNumber, generation, dexNumber));
+                })
+                .collectList()
+                .flatMap(pokemons -> Mono.fromRunnable(() ->
+                        pokedexInitializerDAO.addPokemonToPokedex(pokemons)
+                ).subscribeOn(Schedulers.boundedElastic()))
+                .then(); // returns Mono<Void>
+    }
+
+    private Mono<Pokedex> requestDex(int generation) {
+        return pokeAPIClient.getResource(Pokedex.class, String.valueOf(generation));
+    }
+
+    @Override
+    public Flux<String> receiveListOfRoutes(int generation) {
+        return requestAllRoutes(generation)
+                .map(Route::getName);
+    }
+
+    private Flux<Route> requestAllRoutes(int generation) {
+        return requestDex(generation)
+                .flatMap((pokedex) -> pokeAPIClient.followResource(pokedex::getRegion, Region.class))
+                .flatMapMany((region) -> pokeAPIClient.followResources(region::getLocations, Location.class))
+                .flatMap((location) -> pokeAPIClient.followResources(location::getAreas, LocationArea.class))
+                .flatMap((area) -> {
+                    String locationName = area.getLocation().getName();
+
+                    return Flux.fromIterable(area.getPokemonEncounters())
+                            .flatMap(encounter -> {
+                                String name = encounter.getPokemon().getName();
+
+                                return Mono.fromCallable(() ->
+                                    pokedexInitializerDAO.getPokemonOnName(generation, name)
+                                )
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .flatMap(pokemon -> pokemonInitializer.setNameAndSprite(pokemon));
+                            })
+                            .collectList()
+                            .map(pokemons -> new Route(locationName, pokemons));
+                });
+    }
+
+    @Override
+    public Flux<Pokemon> receiveRoutePokemon(String routeName, int generation) {
+        return requestAllRoutes(generation)
+                .filter((route) -> route.getName().equals(routeName))
+                .flatMapIterable(Route::getPokemons);
     }
 }

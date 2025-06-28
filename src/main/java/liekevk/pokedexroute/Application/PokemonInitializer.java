@@ -3,6 +3,7 @@ package liekevk.pokedexroute.Application;
 import liekevk.pokedexroute.Object.Pokemon;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 import skaro.pokeapi.client.PokeApiClient;
 
 @Service
@@ -14,12 +15,13 @@ public class PokemonInitializer {
         this.pokeAPIClient = pokeAPIClient;
     }
 
-    public void setNameAndSprite(Pokemon pokemon) {
-        skaro.pokeapi.resource.pokemon.Pokemon apiPokemon = pokeAPIClient.getResource(
+    public Mono<Pokemon> setNameAndSprite(Pokemon pokemon) {
+        return pokeAPIClient.getResource(
                 skaro.pokeapi.resource.pokemon.Pokemon.class, String.valueOf(pokemon.getNationalDexNumber()))
-                        .block();
-
-        pokemon.setName(apiPokemon.getName());
-        pokemon.setSprite(apiPokemon.getSprites().getFrontDefault());
+                .map(apiPokemon -> {
+                    pokemon.setName(apiPokemon.getName());
+                    pokemon.setSprite(apiPokemon.getSprites().getFrontDefault());
+                    return pokemon;
+                });
     }
 }

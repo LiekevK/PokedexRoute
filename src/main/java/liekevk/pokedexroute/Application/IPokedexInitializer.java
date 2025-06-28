@@ -1,19 +1,16 @@
 package liekevk.pokedexroute.Application;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import liekevk.pokedexroute.Datasource.exception.PokeAPIClientException;
 import liekevk.pokedexroute.Object.Pokemon;
-
-import java.util.ArrayList;
-import java.util.List;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 public interface IPokedexInitializer {
 
-    List<Pokemon> receiveAllPokemon(int generation) throws JsonProcessingException, PokeAPIClientException;
+    Flux<Pokemon> receiveAllPokemon(int generation);
 
-    void fillDatabaseWithPokemon(int generation) throws JsonProcessingException;
+    Mono<Void> fillDatabaseWithPokemon(int generation);
 
-    ArrayList<String> receiveListOfRoutes(int generation) throws JsonProcessingException, PokeAPIClientException;
+    Flux<String> receiveListOfRoutes(int generation);
 
-    List<Pokemon> receiveRoutePokemon(String routeName, int generation) throws JsonProcessingException, PokeAPIClientException;
+    Flux<Pokemon> receiveRoutePokemon(String routeName, int generation);
 }

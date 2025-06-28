@@ -3,7 +3,8 @@ package liekevk.pokedexroute.Presentation;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import liekevk.pokedexroute.Application.IPokedexInitializer;
-import liekevk.pokedexroute.Pokemon;
+import liekevk.pokedexroute.Datasource.exception.PokeAPIClientException;
+import liekevk.pokedexroute.Object.Pokemon;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,7 +22,7 @@ public class PokedexInitializerController {
     }
 
     @GetMapping("/getPokedex")
-    public List<Pokemon> setPokedex() throws JsonProcessingException {
+    public List<Pokemon> setPokedex() throws JsonProcessingException, PokeAPIClientException {
 
         List<Pokemon> pokemon = pokedexInitializer.receiveAllPokemon(26);
 
@@ -31,6 +32,18 @@ public class PokedexInitializerController {
         }
 
         return pokemon;
+    }
+
+    @GetMapping("/getRoutePokemon")
+    public List<Pokemon> setRoutes() throws JsonProcessingException, PokeAPIClientException {
+        List<Pokemon> pokemon = pokedexInitializer.receiveRoutePokemon("cerulean-city-area", 26);
+        return pokemon;
+    }
+
+    @GetMapping("/getListOfRoutes")
+    public List<String> setRoutesNames() throws JsonProcessingException, PokeAPIClientException {
+        List<String> routes = pokedexInitializer.receiveListOfRoutes(26);
+        return routes;
     }
 
 }

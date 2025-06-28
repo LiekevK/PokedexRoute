@@ -1,0 +1,8 @@
+USE master
+GO
+
+DROP DATABASE IF EXISTS PokedexRoute
+GO
+
+CREATE DATABASE PokedexRoute
+GO

@@ -1,10 +1,12 @@
 package liekevk.pokedexroute.Datasource;
 
-import liekevk.pokedexroute.Pokemon;
+import liekevk.pokedexroute.Object.Pokemon;
 
 import java.util.List;
 
 public interface IPokedexInitializerDAO {
-    public List<Pokemon> initializePokedex(int generation);
-    public void addPokemonToPokedex(int dexNumber);
+    List<Pokemon> initializePokedex(int generation);
+    void addPokemonToPokedex(List<Pokemon> pokedex);
+
+    Pokemon getPokemonOnName(int generation, String name);
 }

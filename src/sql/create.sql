@@ -1,12 +1,3 @@
-USE master
-GO
-
-DROP DATABASE IF EXISTS PokedexRoute
-GO
-
-CREATE DATABASE PokedexRoute
-GO
-
 USE PokedexRoute
 GO
 
@@ -15,7 +6,9 @@ GO
 
 CREATE TABLE Pokedex
 (
-    dexNumber INT NOT NULL PRIMARY KEY,
+    nationalDexNumber INT NOT NULL PRIMARY KEY,
+    generationNumber INT NOT NULL,
+    dexNumber INT NOT NULL,
     [status] BIT NOT NULL DEFAULT 0
 )
 GO

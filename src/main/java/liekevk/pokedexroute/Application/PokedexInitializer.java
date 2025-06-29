@@ -15,6 +15,8 @@ import skaro.pokeapi.resource.pokedex.Pokedex;
 import skaro.pokeapi.resource.pokemonspecies.PokemonSpecies;
 import skaro.pokeapi.resource.region.Region;
 
+import java.util.Comparator;
+
 @Service
 public class PokedexInitializer implements IPokedexInitializer {
     private IPokedexInitializerDAO pokedexInitializerDAO;
@@ -93,6 +95,11 @@ public class PokedexInitializer implements IPokedexInitializer {
                             .collectList()
                             .map(pokemons -> new Route(locationName, pokemons));
 
+                })
+                .collectList()
+                .flatMapMany(routes -> {
+                    routes.sort(Comparator.comparing(Route::getName));
+                    return Flux.fromIterable(routes);
                 });
     }
 
@@ -101,6 +108,11 @@ public class PokedexInitializer implements IPokedexInitializer {
         return requestAllRoutes(generation)
                 .filter((route) -> route.getName().equals(routeName))
                 .flatMapIterable(Route::getPokemons)
-                .distinct(Pokemon::getNationalDexNumber);
+                .distinct(Pokemon::getNationalDexNumber)
+                .collectList()
+                .flatMapMany(list -> {
+                    list.sort(Comparator.comparingInt(Pokemon::getNationalDexNumber));
+                    return Flux.fromIterable(list);
+                });
     }
 }

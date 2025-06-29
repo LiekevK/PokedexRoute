@@ -27,7 +27,8 @@ public class PokedexInitializerDAO implements IPokedexInitializerDAO {
                 int nationalDexNumber = resultSet.getInt("nationalDexNumber");
                 int generationNumber = resultSet.getInt("generationNumber");
                 int dexNumber = resultSet.getInt("dexNumber");
-                lists.add(new Pokemon(nationalDexNumber, generationNumber, dexNumber));
+                String name = resultSet.getString("name");
+                lists.add(new Pokemon(nationalDexNumber, generationNumber, dexNumber, name));
             }
             connection.close();
         } catch (Exception e) {
@@ -40,18 +41,19 @@ public class PokedexInitializerDAO implements IPokedexInitializerDAO {
     public void addPokemonToPokedex(List<Pokemon> pokedex) {
         try {
             Connection connection = DriverManager.getConnection(properties.connectionString());
-            String sql = "INSERT INTO Pokedex (nationalDexNumber, generationNumber, dexNumber) VALUES ";
+            String sql = "INSERT INTO Pokedex (nationalDexNumber, generationNumber, dexNumber, name) VALUES ";
             sql += pokedex.stream()
-                    .map((p) -> "(?,?,?)")
+                    .map((p) -> "(?,?,?,?)")
                     .collect(Collectors.joining(","));
 
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
 
             for (int i = 0; i < pokedex.size(); i++) {
                 Pokemon pokemon = pokedex.get(i);
-                preparedStatement.setInt(i * 3 + 1, pokemon.getNationalDexNumber());
-                preparedStatement.setInt(i * 3 + 2, pokemon.getGenerationNumber());
-                preparedStatement.setInt(i * 3 + 3, pokemon.getDexNumber());
+                preparedStatement.setInt(i * 4 + 1, pokemon.getNationalDexNumber());
+                preparedStatement.setInt(i * 4 + 2, pokemon.getGenerationNumber());
+                preparedStatement.setInt(i * 4 + 3, pokemon.getDexNumber());
+                preparedStatement.setString(i * 4 + 4, pokemon.getName());
             }
 
             preparedStatement.executeUpdate();
@@ -73,9 +75,8 @@ public class PokedexInitializerDAO implements IPokedexInitializerDAO {
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
                 int nationalDexNumber = resultSet.getInt("nationalDexNumber");
-                int generationNumber = resultSet.getInt("generationNumber");
                 int dexNumber = resultSet.getInt("dexNumber");
-                pokemon = new Pokemon(nationalDexNumber, generationNumber, dexNumber);
+                pokemon = new Pokemon(nationalDexNumber, generation, dexNumber, name);
             }
 
             connection.close();

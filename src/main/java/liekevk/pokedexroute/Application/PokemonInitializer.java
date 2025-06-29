@@ -15,11 +15,10 @@ public class PokemonInitializer {
         this.pokeAPIClient = pokeAPIClient;
     }
 
-    public Mono<Pokemon> setNameAndSprite(Pokemon pokemon) {
+    public Mono<Pokemon> setSprite(Pokemon pokemon) {
         return pokeAPIClient.getResource(
                 skaro.pokeapi.resource.pokemon.Pokemon.class, String.valueOf(pokemon.getNationalDexNumber()))
                 .map(apiPokemon -> {
-                    pokemon.setName(apiPokemon.getName());
                     pokemon.setSprite(apiPokemon.getSprites().getFrontDefault());
                     return pokemon;
                 });

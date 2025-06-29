@@ -10,10 +10,11 @@ public class Pokemon {
     private String name;
     private String sprite;
 
-    public Pokemon(int nationalDexNumber, int generationNumber, int dexNumber) {
+    public Pokemon(int nationalDexNumber, int generationNumber, int dexNumber, String name) {
         this.nationalDexNumber = nationalDexNumber;
         this.generationNumber = generationNumber;
         this.dexNumber = dexNumber;
+        this.name = name;
     }
 
     public int getDexNumber() {
@@ -32,10 +33,6 @@ public class Pokemon {
     }
     public String getSprite() {
         return sprite;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public void setSprite(String sprite) {

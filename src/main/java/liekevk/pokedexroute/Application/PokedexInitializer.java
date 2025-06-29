@@ -15,8 +15,6 @@ import skaro.pokeapi.resource.pokedex.Pokedex;
 import skaro.pokeapi.resource.pokemonspecies.PokemonSpecies;
 import skaro.pokeapi.resource.region.Region;
 
-import java.util.List;
-
 @Service
 public class PokedexInitializer implements IPokedexInitializer {
     private IPokedexInitializerDAO pokedexInitializerDAO;
@@ -43,7 +41,7 @@ public class PokedexInitializer implements IPokedexInitializer {
         return Mono.fromCallable(() -> pokedexInitializerDAO.initializePokedex(generation))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMapMany(Flux::fromIterable)
-                .flatMap(pokemon -> pokemonInitializer.setNameAndSprite(pokemon));
+                .flatMap(pokemon -> pokemonInitializer.setSprite(pokemon)); /// CHANGE TO ONLY SPRITE
     }
 
     @Override
@@ -52,9 +50,10 @@ public class PokedexInitializer implements IPokedexInitializer {
                 .flatMapIterable(Pokedex::getPokemonEntries)
                 .flatMap(entry -> {
                     int dexNumber = entry.getEntryNumber();
+                    String name = entry.getPokemonSpecies().getName();
                     return pokeAPIClient.followResource(entry::getPokemonSpecies, PokemonSpecies.class)
                             .map(PokemonSpecies::getId)
-                            .map(nationalNumber -> new Pokemon(nationalNumber, generation, dexNumber));
+                            .map(nationalNumber -> new Pokemon(nationalNumber, generation, dexNumber, name));
                 })
                 .collectList()
                 .flatMap(pokemons -> Mono.fromRunnable(() ->
@@ -89,10 +88,11 @@ public class PokedexInitializer implements IPokedexInitializer {
                                     pokedexInitializerDAO.getPokemonOnName(generation, name)
                                 )
                                 .subscribeOn(Schedulers.boundedElastic())
-                                .flatMap(pokemon -> pokemonInitializer.setNameAndSprite(pokemon));
+                                .flatMap(pokemon -> pokemonInitializer.setSprite(pokemon));
                             })
                             .collectList()
                             .map(pokemons -> new Route(locationName, pokemons));
+
                 });
     }
 
@@ -100,6 +100,7 @@ public class PokedexInitializer implements IPokedexInitializer {
     public Flux<Pokemon> receiveRoutePokemon(String routeName, int generation) {
         return requestAllRoutes(generation)
                 .filter((route) -> route.getName().equals(routeName))
-                .flatMapIterable(Route::getPokemons);
+                .flatMapIterable(Route::getPokemons)
+                .distinct(Pokemon::getNationalDexNumber);
     }
 }

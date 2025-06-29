@@ -14,18 +14,24 @@ document.addEventListener("DOMContentLoaded", () => {
             })
             .catch((error) => console.error("Error:", error));
     });
-    document.getElementById("getRoutePokemon").addEventListener("click", function(){
+
+    document.getElementById("getRoutePokemon").addEventListener("click", () => {
         pokedexData.innerHTML = "";
-        fetch("http://localhost:8080/getRoutePokemon")
-            .then (response => response.json())
-            .then (data => {
-                for (let i = 0; i < data.length; i++) {
+        const dropdown = document.getElementById("routeDropdown");
+        const selectedRoute = dropdown.value;
+
+        fetch(`http://localhost:8080/getRoutePokemon?route=${encodeURIComponent(selectedRoute)}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                // Display images:
+                data.forEach(pokemon => {
                     const img = document.createElement("img");
-                    img.src = data[i].sprite;
+                    img.src = pokemon.sprite;
                     pokedexData.appendChild(img);
-                }
+                });
             })
-            .catch((error) => console.error("Error:", error))
+            .catch(error => console.error("Error:", error));
     });
 
     fetch("http://localhost:8080/getListOfRoutes")
@@ -33,10 +39,11 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(data => {
             const dropdown = document.getElementById("routeDropdown");
             data.forEach(item => {
-                option.value = item.value;
-                option.text = item.text;
+                const option = document.createElement("option");
+                option.value = item;
+                option.text = item;
                 dropdown.appendChild(option);
             });
         })
-        .catch(error => console.error("Error:", error))
+        .catch(error => console.error("Error:", error));
 });

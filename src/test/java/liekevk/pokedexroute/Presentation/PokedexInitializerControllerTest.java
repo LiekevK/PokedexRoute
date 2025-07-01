@@ -1,8 +1,7 @@
-package liekevk.pokedexroute;
+package liekevk.pokedexroute.Presentation;
 
 import liekevk.pokedexroute.Application.IPokedexInitializer;
 import liekevk.pokedexroute.Object.Pokemon;
-import liekevk.pokedexroute.Presentation.PokedexInitializerController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;

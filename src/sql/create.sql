@@ -13,3 +13,6 @@ CREATE TABLE Pokedex
     [status] BIT NOT NULL DEFAULT 0
 )
 GO
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON Pokedex TO someone
+GO

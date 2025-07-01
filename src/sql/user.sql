@@ -23,8 +23,5 @@ CREATE USER someone
     FROM LOGIN someone
 GO
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON Pokedex TO someone
-GO
-
 
 

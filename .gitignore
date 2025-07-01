@@ -38,3 +38,7 @@ build/
 ### Properties ###
 application-dev.properties
 application-prod.properties
+
+### Environment Variables ###
+.env
+.env.*

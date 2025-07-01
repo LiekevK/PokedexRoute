@@ -1,0 +1,48 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: ${DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_SQL_INIT_MODE: always
+
+  db:
+    build: ./db
+    environment:
+      ACCEPT_EULA: Y
+      SA_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+      - ./db/setup.sql:/usr/config/setup/setup.sql
+    command: >
+      /bin/bash -c "
+        # 1. Start SQL Server in the background
+        /opt/mssql/bin/sqlservr &
+        
+        # 2. Loop until SQL Server accepts connections
+        /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P \"$$SA_PASSWORD\" -Q 'SELECT 1' -h -1 > /dev/null 2>&1
+        while [ $? -ne 0 ]; do
+          echo 'SQL Server is starting up... waiting for connections'
+          sleep 5
+          /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P \"$$SA_PASSWORD\" -Q 'SELECT 1' -h -1 > /dev/null 2>&1
+        done
+        echo 'SQL Server is ready. Running setup.sql...'
+        
+        # 3. Run the database initialization script
+        /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P \"$$SA_PASSWORD\" -i /usr/config/setup/setup.sql
+        
+        echo 'Setup script completed. Keeping SQL Server running...'
+        
+        # 4. Wait for the background sqlservr process to keep the container alive
+        wait
+      "
+
+volumes:
+  sqlserver-data:

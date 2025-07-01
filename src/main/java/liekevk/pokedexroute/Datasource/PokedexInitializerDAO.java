@@ -1,89 +1,87 @@
 package liekevk.pokedexroute.Datasource;
 
-import liekevk.pokedexroute.Datasource.util.DatabaseProperties;
 import liekevk.pokedexroute.Object.Pokemon;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
-@Component
+@Repository
 public class PokedexInitializerDAO implements IPokedexInitializerDAO {
-    private DatabaseProperties properties = new DatabaseProperties();
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    public void setJdbcTemplate(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
 
     @Override
     public List<Pokemon> initializePokedex(int generation) {
-        List<Pokemon> lists = new ArrayList<>();
+        String sql = "SELECT * FROM Pokedex";
         try {
-            Connection connection = DriverManager.getConnection(properties.connectionString());
-            PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Pokedex");
-            ResultSet resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                int nationalDexNumber = resultSet.getInt("nationalDexNumber");
-                int generationNumber = resultSet.getInt("generationNumber");
-                int dexNumber = resultSet.getInt("dexNumber");
-                String name = resultSet.getString("name");
-                lists.add(new Pokemon(nationalDexNumber, generationNumber, dexNumber, name));
-            }
-            connection.close();
+            return jdbcTemplate.query(sql,
+                    (rs, rowNum) -> new Pokemon(
+                            rs.getInt("nationalDexNumber"),
+                            rs.getInt("generationNumber"),
+                            rs.getInt("dexNumber"),
+                            rs.getString("name")
+                    )
+            );
+        } catch (EmptyResultDataAccessException e) {
+            return List.of();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        return lists;
     }
 
     @Override
     public void addPokemonToPokedex(List<Pokemon> pokedex) {
+        String sql = "INSERT INTO Pokedex (nationalDexNumber, generationNumber, dexNumber, name) VALUES (?,?,?,?)";
+
+        List<Object[]> batchArgs = pokedex.stream()
+            .map(p -> new Object[]{ // Map each Pokemon object to an Object array
+                    p.getNationalDexNumber(),
+                    p.getGenerationNumber(),
+                    p.getDexNumber(),
+                    p.getName()
+            })
+            .toList();
+
         try {
-            Connection connection = DriverManager.getConnection(properties.connectionString());
-            String sql = "INSERT INTO Pokedex (nationalDexNumber, generationNumber, dexNumber, name) VALUES ";
-            sql += pokedex.stream()
-                    .map((p) -> "(?,?,?,?)")
-                    .collect(Collectors.joining(","));
+            int[] rowsAffectedPerBatch = jdbcTemplate.batchUpdate(sql, batchArgs);
+            int totalRowsAffected = Arrays.stream(rowsAffectedPerBatch).sum();
 
-            PreparedStatement preparedStatement = connection.prepareStatement(sql);
-
-            for (int i = 0; i < pokedex.size(); i++) {
-                Pokemon pokemon = pokedex.get(i);
-                preparedStatement.setInt(i * 4 + 1, pokemon.getNationalDexNumber());
-                preparedStatement.setInt(i * 4 + 2, pokemon.getGenerationNumber());
-                preparedStatement.setInt(i * 4 + 3, pokemon.getDexNumber());
-                preparedStatement.setString(i * 4 + 4, pokemon.getName());
-            }
-
-            preparedStatement.executeUpdate();
-            connection.close();
+            System.out.println("Successfully added " + totalRowsAffected + " pokemon entries in batch.");
         } catch (Exception e) {
             System.out.println("Can't add pokemon to pokedex");
             e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
     @Override
     public Pokemon getPokemonOnName(int generation, String name) {
-        Pokemon pokemon = null;
+        String sql = "SELECT * FROM Pokedex WHERE generationNumber = ? AND name = ?";
         try {
-            Connection connection = DriverManager.getConnection(properties.connectionString());
-            PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Pokedex WHERE generationNumber = ? AND name = ?");
-            preparedStatement.setInt(1, generation);
-            preparedStatement.setString(2, name);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                int nationalDexNumber = resultSet.getInt("nationalDexNumber");
-                int dexNumber = resultSet.getInt("dexNumber");
-                pokemon = new Pokemon(nationalDexNumber, generation, dexNumber, name);
-            }
-
-            connection.close();
+            return jdbcTemplate.queryForObject(sql,
+                    (rs, rowNum) -> new Pokemon(
+                            rs.getInt("nationalDexNumber"),
+                            generation,
+                            rs.getInt("dexNumber"),
+                            name
+                    ),
+                    generation,
+                    name
+            );
+        } catch (EmptyResultDataAccessException e) {
+            return null;
         } catch (Exception e) {
             System.out.println("Can't get pokemon on name");
             e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return pokemon;
     }
 }

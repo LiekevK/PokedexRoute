@@ -1,0 +1,12 @@
+{
+  "name": "pokedexroute",
+  "private": true,
+  "scripts": {
+    "gen:insert": "node db/convert-pokemon-data.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "pokedex-promise-v2": "^4.2.1"
+  },
+  "packageManager": "yarn@4.10.3"
+}
